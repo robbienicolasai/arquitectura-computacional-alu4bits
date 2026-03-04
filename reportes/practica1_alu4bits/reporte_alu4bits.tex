@@ -120,7 +120,7 @@
 \begin{tabular}{@{}L{0.30\textwidth}L{0.62\textwidth}@{}}
 \textbf{Materia} & P26-LIS2022-1\\
 & Arquitecturas Computacionales\\
-\textbf{Profesor} & Dr. Omar Guillén Fernández\\
+\textbf{Profesor} & Berenice Rodriguez Pedroza\\
 \textbf{Sección} & 2\\
 \textbf{Periodo} & Primavera 2026\\
 \textbf{Fecha de práctica} & 4 de marzo de 2026\\
@@ -150,16 +150,18 @@ Hector López Sanchez \hfill 185979 \hfill \href{mailto:hector.lopezsz@udlap.mx}
 
 % ========================= CONTENIDO =========================
 \section{Introducción}
-Una Unidad Aritmética Lógica (ALU) es el componente central de cualquier procesador, encargado de ejecutar operaciones aritméticas y lógicas sobre los datos.
-En esta práctica se diseñó, sintetizó e implementó en FPGA una ALU simple de 4 bits capaz de realizar ocho operaciones distintas, seleccionadas mediante una señal de control de 4 bits.
+Una Unidad Aritmética Lógica (ALU) es el bloque fundamental de ejecución dentro de un procesador, encargado de realizar cálculos aritméticos y evaluaciones lógicas.
+Esta práctica se desarrolla como una introducción al diseño de unidades funcionales en hardware descriptivo utilizando herramientas de simulación y síntesis FPGA.
 
-La validación se realizó tanto en síntesis con Vivado como en montaje físico con protoboard, switches y LEDs conectados a los puertos PMOD de la tarjeta PYNQ-Z1.
+De acuerdo con la especificación de la práctica, la ALU debe soportar siete operaciones básicas seleccionadas mediante una señal de control de 3 bits (\texttt{ALUControl[2:0]}), incluyendo operaciones aritméticas con y sin signo y operaciones lógicas bit a bit.
+
+La validación se realizó en montaje físico con protoboard, switches y LEDs conectados a los puertos PMOD de la tarjeta PYNQ-Z1.
 
 \section{Objetivos}
 \begin{itemize}
-  \item Diseñar una ALU de 4 bits en VHDL con operaciones aritméticas y lógicas.
+  \item Diseñar e implementar una ALU simple de 4 bits que soporte siete operaciones básicas.
+  \item Describir el diseño en VHDL utilizando un proceso combinacional.
   \item Sintetizar e implementar el diseño en Vivado para la FPGA Zynq-7000.
-  \item Asignar pines físicos mediante archivo de restricciones XDC.
   \item Validar el funcionamiento en hardware real usando protoboard, switches y LEDs.
 \end{itemize}
 
@@ -174,36 +176,63 @@ La validación se realizó tanto en síntesis con Vivado como en montaje físico
 \section{Marco teórico}
 
 \subsection{Unidad Aritmética Lógica}
-La ALU recibe dos operandos y una señal de control, y produce un resultado según la operación seleccionada.
+La ALU constituye el bloque de ejecución dentro de un procesador, ya que permite realizar cálculos aritméticos y evaluaciones lógicas.
 En arquitecturas RISC como RISC-V, la ALU es puramente combinacional: no tiene reloj ni memoria interna, y la salida cambia inmediatamente al cambiar las entradas.
 
-\subsection{Operaciones implementadas}
-Las operaciones aritméticas usan aritmética sin signo (\texttt{unsigned}).
-La suma y resta se realizan mediante:
+\subsection{Especificación de la práctica}
+Según el documento de la práctica, la ALU recibe:
+\begin{itemize}
+  \item $A[3:0]$: Operando A de 4 bits.
+  \item $B[3:0]$: Operando B de 4 bits.
+  \item $ALUControl[2:0]$: Señal de selección de operación (3 bits).
+\end{itemize}
+
+Y produce:
+\begin{itemize}
+  \item $Result[3:0]$: Resultado de la operación.
+  \item $CarryOut$: Bit de acarreo de salida para operaciones aritméticas.
+\end{itemize}
+
+\subsection{Conjunto de operaciones}
+La ALU debe implementar las siguientes siete operaciones:
+
+\begin{table}[H]
+\centering
+\caption{Operaciones especificadas en la práctica.}
+\label{tab:ops_spec}
+\begin{tabular}{C{1.8cm}ll}
+\toprule
+\texttt{ALUCtrl} & Operación & Descripción \\
+\midrule
+\texttt{000} & ADDU & Suma sin signo ($A+B$) \\
+\texttt{001} & ADDS & Suma con signo (C2) \\
+\texttt{010} & SUB  & Resta ($A-B$) \\
+\texttt{011} & AND  & AND bit a bit \\
+\texttt{100} & OR   & OR bit a bit \\
+\texttt{101} & XOR  & XOR bit a bit \\
+\texttt{110} & NOR  & NOR bit a bit \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Descripción de las operaciones}
+\textbf{Suma sin signo (ADDU):}
 \[
-\text{ADD:}\quad R = A + B
-\]
-\[
-\text{SUB:}\quad R = A - B
+R = A + B, \qquad CarryOut = \text{acarreo del bit 4}
 \]
 
-Las operaciones lógicas se aplican bit a bit:
-\[
-\text{AND:}\quad R_i = A_i \land B_i
-\]
-\[
-\text{OR:}\quad R_i = A_i \lor B_i
-\]
-\[
-\text{XOR:}\quad R_i = A_i \oplus B_i
-\]
-\[
-\text{NOT:}\quad R_i = \overline{A_i}
-\]
+\textbf{Suma con signo (ADDS):} Los operandos se interpretan como números en complemento a dos.
 
-Los corrimientos desplazan los bits de $A$ una posición:
+\textbf{Resta (SUB):} Se implementa como $A + (\sim B + 1)$ utilizando aritmética de complemento a dos.
+
+\textbf{Operaciones lógicas:} Se aplican bit a bit entre los dos operandos:
 \[
-\text{SHL:}\quad R = A \ll 1 \qquad \text{SHR:}\quad R = A \gg 1
+\text{AND:}\ R_i = A_i \land B_i \qquad
+\text{OR:}\ R_i = A_i \lor B_i
+\]
+\[
+\text{XOR:}\ R_i = A_i \oplus B_i \qquad
+\text{NOR:}\ R_i = \overline{A_i \lor B_i}
 \]
 
 \subsection{PMOD y mapeo de pines}
@@ -212,33 +241,12 @@ Se usó PMODA para las entradas ($A$ y $B$) y PMODB para el control y la salida.
 
 \section{Diseño y procedimiento}
 
-\subsection{Especificación de la ALU}
-La ALU recibe dos operandos de 4 bits (\texttt{op\_a[3:0]} y \texttt{op\_b[3:0]}), una señal de control de 4 bits (\texttt{alu\_ctrl[3:0]}), y entrega un resultado de 4 bits (\texttt{result[3:0]}).
-
-\begin{table}[H]
-\centering
-\caption{Tabla de operaciones de la ALU.}
-\label{tab:ops}
-\begin{tabular}{C{1.8cm}l}
-\toprule
-\texttt{alu\_ctrl} & Operación \\
-\midrule
-\texttt{0000} & ADD (suma) \\
-\texttt{0001} & SUB (resta) \\
-\texttt{0010} & AND \\
-\texttt{0011} & OR \\
-\texttt{0100} & XOR \\
-\texttt{0101} & NOT $A$ \\
-\texttt{0110} & Shift left $A$ \\
-\texttt{0111} & Shift right $A$ \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Descripción en VHDL}
+\subsection{Implementación en VHDL}
 El módulo \texttt{alu1\_0} se implementó con un proceso combinacional sensible a las tres entradas.
-Dentro del proceso, una sentencia \texttt{case} selecciona la operación según \texttt{alu\_ctrl}.
-Se utilizó \texttt{IEEE.NUMERIC\_STD} con el tipo \texttt{unsigned} para las operaciones aritméticas, y operadores lógicos nativos de \texttt{std\_logic\_vector} para AND, OR, XOR y NOT.
+Dentro del proceso, una sentencia \texttt{case} selecciona la operación según la señal de control.
+Se utilizó \texttt{IEEE.NUMERIC\_STD} con los tipos \texttt{unsigned} y \texttt{signed} para las operaciones aritméticas, y operadores lógicos nativos de \texttt{std\_logic\_vector} para AND, OR, XOR y NOR.
+
+Para las operaciones aritméticas se recomienda utilizar conversiones a tipo \texttt{unsigned} o \texttt{signed} según corresponda, y el resultado debe truncarse a 4 bits, almacenando el bit adicional en la señal \texttt{CarryOut}.
 
 \subsection{Asignación de pines (XDC)}
 Se creó el archivo de restricciones \texttt{alu4bits\_pynqz1\_pmod.xdc} con el siguiente mapeo:
@@ -253,7 +261,7 @@ Puerto & Conector & Pines \\
 \midrule
 \texttt{op\_a[3:0]}    & PMODA[0..3] & Y18, Y19, Y16, Y17 \\
 \texttt{op\_b[3:0]}    & PMODA[4..7] & U18, U19, W18, W19 \\
-\texttt{alu\_ctrl[3:0]} & PMODB[0..3] & W14, Y14, T11, T10 \\
+\texttt{alu\_ctrl[2:0]} & PMODB[0..2] & W14, Y14, T11 \\
 \texttt{result[3:0]}   & PMODB[4..7] & V16, W16, V12, W13 \\
 \bottomrule
 \end{tabular}
@@ -263,11 +271,13 @@ Se configuraron todos los pines con LVCMOS33 y se habilitaron pull-ups en las en
 
 \subsection{Flujo de implementación}
 \begin{enumerate}
-  \item Crear proyecto en Vivado con \texttt{alu1\_0} como top module.
+  \item Diseñar la ALU utilizando un proceso combinacional.
+  \item Utilizar una sentencia \texttt{case} para seleccionar la operación según \texttt{ALUControl}.
+  \item Crear proyecto en Vivado con el módulo ALU como top module.
   \item Agregar archivo de restricciones XDC.
   \item Ejecutar síntesis, implementación y generar bitstream.
   \item Programar la PYNQ-Z1 y conectar protoboard.
-  \item Probar cada operación variando switches y observando LEDs.
+  \item Verificar el funcionamiento mediante pruebas en hardware.
 \end{enumerate}
 
 % ========================= UNA COLUMNA DESDE RESULTADOS =========================
@@ -296,9 +306,9 @@ begin
     process(op_a, op_b, alu_ctrl)
     begin
         case alu_ctrl is
-            when "0000" =>  -- ADD
+            when "0000" =>  -- ADDU (suma sin signo)
                 result <= std_logic_vector(unsigned(op_a) + unsigned(op_b));
-            when "0001" =>  -- SUB
+            when "0001" =>  -- SUB (resta)
                 result <= std_logic_vector(unsigned(op_a) - unsigned(op_b));
             when "0010" =>  -- AND
                 result <= op_a and op_b;
@@ -319,6 +329,9 @@ begin
 end Behavioral;
 \end{lstlisting}
 
+\textbf{Nota:} La implementación actual utiliza un control de 4 bits con ocho operaciones.
+Como mejora futura, se puede ajustar a un control de 3 bits con las siete operaciones exactas de la especificación (incluyendo ADDS y NOR) e incorporar la señal \texttt{CarryOut}.
+
 \subsection{Pruebas experimentales en FPGA}
 Se validaron seis operaciones en hardware.
 En todos los casos, la salida observada en los LEDs coincidió con el resultado esperado.
@@ -336,11 +349,10 @@ SUB & \texttt{0001} & 2, 1 & 1 (\texttt{0001}) & Correcto \\
 AND & \texttt{0010} & 1, 1 & 1 (\texttt{0001}) & Correcto \\
 OR  & \texttt{0011} & 3, 1 & 3 (\texttt{0011}) & Correcto \\
 XOR & \texttt{0100} & 3, 1 & 2 (\texttt{0010}) & Correcto \\
-NOR & \texttt{0101}\footnotemark & 3, 1 & 12 (\texttt{1100}) & Correcto \\
+NOT & \texttt{0101} & 3, -- & 12 (\texttt{1100}) & Correcto \\
 \bottomrule
 \end{tabular}
 \end{table}
-\footnotetext{La prueba de NOR se realizó con la operación NOT aplicada al operando $A=3$ (\texttt{0011}), resultando en \texttt{1100} = 12.}
 
 \subsection{Evidencia fotográfica}
 
@@ -402,7 +414,7 @@ Los resultados en hardware coinciden con los valores calculados manualmente, con
 
 \section{Comparación teórico-práctica}
 Los resultados obtenidos en hardware coinciden con los valores teóricos calculados para cada operación.
-Por ejemplo, para la suma $1 + 1 = 2$, el LED muestra \texttt{0010}, que corresponde al valor decimal 2.
+Por ejemplo, para la suma $1 + 1 = 2$, los LEDs muestran \texttt{0010}, que corresponde al valor decimal 2.
 Para la operación NOT sobre $A = 3$ (\texttt{0011}), se obtiene \texttt{1100} = 12, que es el complemento a uno esperado en 4 bits.
 
 La ALU implementada es puramente combinacional: no utiliza reloj ni elementos de memoria, por lo que la salida se actualiza en tiempo real al cambiar las entradas en los switches.
@@ -412,12 +424,15 @@ Este comportamiento fue verificado experimentalmente durante las pruebas.
 Se diseñó e implementó exitosamente una ALU de 4 bits sobre la FPGA PYNQ-Z1, validando operaciones aritméticas (ADD, SUB) y lógicas (AND, OR, XOR, NOT) en hardware real.
 La práctica reforzó el flujo completo de diseño digital: codificación en VHDL, asignación de restricciones, síntesis, implementación y verificación experimental.
 
-Como trabajo futuro, se pueden agregar banderas de estado (carry, overflow, zero) y extender el ancho a 8 o 16 bits para acercarse a una ALU de propósito general como las usadas en procesadores RISC-V.
+Como trabajo futuro, se puede ajustar el diseño a la especificación completa con control de 3 bits, agregar la operación ADDS (suma con signo) y NOR, e incorporar la bandera \texttt{CarryOut} para operaciones aritméticas.
 
 \section{Referencias}
 \begin{thebibliography}{9}
 \bibitem{manual_practica}
-O. Guillén Fernández. Práctica 1: Unidad Aritmética Lógica (ALU) Simple de 4 bits. Universidad de las Américas Puebla, 2026.
+Práctica: Unidad Aritmética Lógica (ALU) Simple de 4 bits. Arquitecturas Computacionales, Universidad de las Américas Puebla, 2026.
+
+\bibitem{riscv}
+RISC-V International. Especificación de la arquitectura RISC-V. Disponible en: \url{https://riscv.org/technical/specifications/}
 
 \bibitem{ieee_vhdl}
 IEEE. IEEE Standard VHDL Language Reference Manual (IEEE Std 1076-2008).
@@ -428,6 +443,8 @@ Digilent. PYNQ-Z1 Reference Manual. Disponible en: \url{https://digilent.com/ref
 \bibitem{vivado}
 AMD Xilinx. Vivado Design Suite User Guide. Disponible en: \url{https://www.xilinx.com/support/documentation-navigation/design-hubs/dh0002-vivado-design-hub.html}
 
+\bibitem{udlap_material}
+Material de arquitectura computacional de Universidad de las Américas Puebla.
 \end{thebibliography}
 
 \end{document}
