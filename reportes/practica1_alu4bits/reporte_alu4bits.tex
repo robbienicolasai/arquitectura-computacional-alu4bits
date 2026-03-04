@@ -1,167 +1,433 @@
-\documentclass[12pt]{article}
+\documentclass[12pt,letterpaper]{article}
 
+% -------------------- Paquetes --------------------
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[spanish]{babel}
 \usepackage{geometry}
-\geometry{letterpaper, margin=2cm}
+\geometry{margin=2.5cm}
+
+\usepackage{setspace}
+\setstretch{1.15}
+
 \usepackage{graphicx}
 \usepackage{float}
-\usepackage{booktabs}
-\usepackage{array}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{siunitx}
+\sisetup{detect-all, round-mode=places, round-precision=3}
+
 \usepackage{hyperref}
-\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
-\usepackage{eso-pic}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
 \usepackage{tikz}
+\usepackage{eso-pic}
 
-\graphicspath{{figs/}}
-\setlength{\parindent}{0pt}
-\setlength{\parskip}{6pt}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{listings}
 
-\title{\textbf{Práctica 1. Unidad Aritmética Lógica (ALU) Simple de 4 bits}\\
-\large Arquitecturas Computacionales}
-\author{Robbie Nicolás Curioso de Salazar (ID 186028)\\
-\textit{Hector López Sanchez (ID 185979)}\\
-Universidad de las Américas Puebla\\
-Profesor: Berenice Rodriguez Pedroza}
-\date{\today}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
 
-\begin{document}
+% -------------------- Compactación --------------------
+\captionsetup{font=small}
+\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
+\setlength{\floatsep}{8pt plus 2pt minus 2pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{4pt}
+\setlength{\belowcaptionskip}{4pt}
 
+% -------------------- Listings VHDL --------------------
+\lstdefinelanguage{VHDL}{
+  morekeywords=[1]{library,use,all,entity,is,port,in,out,end,architecture,of,begin,process,signal,if,then,elsif,rising_edge,else,when,others,generic,map,case},
+  morekeywords=[2]{std_logic,std_logic_vector,signed,unsigned,integer,STD_LOGIC_VECTOR,STD_LOGIC},
+  sensitive=true,
+  morecomment=[l]{--},
+  morestring=[b]"
+}
+\lstset{
+  language=VHDL,
+  basicstyle=\ttfamily\scriptsize,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  breaklines=true,
+  tabsize=2,
+  captionpos=b,
+  keywordstyle=[1]\bfseries\color{blue!70!black},
+  keywordstyle=[2]\color{teal},
+  commentstyle=\itshape\color{gray},
+  stringstyle=\color{orange!80!black}
+}
+
+% -------------------- Encabezado / Pie --------------------
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\textbf{P26-LIS2022-1}}
+\rhead{\textbf{Práctica 1:} ALU de 4 bits}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\fancyfoot[C]{\small
+\begin{tabular}{c}
+186028; \href{mailto:robbie.curiosodr@udlap.mx}{robbie.curiosodr@udlap.mx}
+\end{tabular}
+}
+\fancyfoot[R]{\small \thepage}
+
+% -------------------- Marca de agua UDLAP --------------------
 \AddToShipoutPictureBG{%
   \begin{tikzpicture}[remember picture,overlay]
     \node[opacity=0.08, rotate=12, anchor=south east] at ([xshift=1.8cm,yshift=-1.6cm]current page.south east)
-    {\includegraphics[width=0.72\paperwidth]{udlap_logo.png}};
+    {\includegraphics[width=0.75\paperwidth]{udlap_logo.png}};
   \end{tikzpicture}
 }
 
-\twocolumn[
-\maketitle
-\vspace{-0.5cm}
-]
+% -------------------- Estilo de párrafos --------------------
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
 
-\section*{Objetivo}
-Diseñar, sintetizar y probar en FPGA una ALU simple de 4 bits para ejecutar operaciones aritméticas y lógicas entre dos operandos de entrada. La práctica se enfocó en validar el funcionamiento del diseño tanto en Vivado como en montaje físico con protoboard.
+% -------------------- Helpers para tablas --------------------
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
 
-\section*{Especificación solicitada}
-De acuerdo con la práctica, la ALU recibe dos operandos de 4 bits ($A[3:0]$ y $B[3:0]$), una señal de control, y entrega un resultado de 4 bits junto con una bandera de acarreo para operaciones aritméticas.
+\graphicspath{{figs/}}
 
-\begin{table}[H]
-\centering
-\caption{Operaciones pedidas en el enunciado.}
-\begin{tabular}{cl}
-\toprule
-ALUControl & Operación \\
-\midrule
-000 & ADDU \\
-001 & ADDS \\
-010 & SUB \\
-011 & AND \\
-100 & OR \\
-101 & XOR \\
-110 & NOR \\
-\bottomrule
-\end{tabular}
-\end{table}
+\begin{document}
 
-\section*{Implementación realizada}
-Se trabajó sobre el repositorio:
+% ========================= PORTADA =========================
+\begin{titlepage}
+\thispagestyle{empty}
 \begin{center}
-\url{https://github.com/robbienicolasai/arquitectura-computacional-alu4bits}
-\end{center}
+\vspace*{0.8cm}
 
-Archivos principales del laboratorio:
+{\Large \textsc{Universidad de las Américas Puebla}}\par
+{\small Departamento de Computación, Electrónica y Mecatrónica}\par
+
+\vspace{1.2cm}
+
+{\Huge \textbf{Reporte de práctica}}\par
+\vspace{0.15cm}
+{\Large \textbf{Práctica 1: Unidad Aritmética Lógica (ALU) Simple de 4 bits}}\par
+
+\vspace{1.0cm}
+
+\begin{minipage}{0.92\textwidth}
+\rule{\textwidth}{0.8pt}\par
+\vspace{0.35cm}
+
+\begin{tabular}{@{}L{0.30\textwidth}L{0.62\textwidth}@{}}
+\textbf{Materia} & P26-LIS2022-1\\
+& Arquitecturas Computacionales\\
+\textbf{Profesor} & Dr. Omar Guillén Fernández\\
+\textbf{Sección} & 2\\
+\textbf{Periodo} & Primavera 2026\\
+\textbf{Fecha de práctica} & 4 de marzo de 2026\\
+\textbf{Fecha de entrega} & \today\\
+\end{tabular}
+
+\vspace{0.35cm}
+\rule{\textwidth}{0.8pt}
+\end{minipage}
+
+\vfill
+
+\begin{minipage}{0.92\textwidth}
+\textbf{Integrantes}\par
+\vspace{0.25cm}
+Robbie Nicolás Curioso de Salazar \hfill 186028 \hfill \href{mailto:robbie.curiosodr@udlap.mx}{robbie.curiosodr@udlap.mx}\par
+\vspace{0.25cm}
+Hector López Sanchez \hfill 185979 \hfill \href{mailto:hector.lopezsz@udlap.mx}{hector.lopezsz@udlap.mx}\par
+\end{minipage}
+
+\vspace{0.6cm}
+\end{center}
+\end{titlepage}
+
+% ========================= DOS COLUMNAS (SECCIONES DE TEXTO) =========================
+\twocolumn
+
+% ========================= CONTENIDO =========================
+\section{Introducción}
+Una Unidad Aritmética Lógica (ALU) es el componente central de cualquier procesador, encargado de ejecutar operaciones aritméticas y lógicas sobre los datos.
+En esta práctica se diseñó, sintetizó e implementó en FPGA una ALU simple de 4 bits capaz de realizar ocho operaciones distintas, seleccionadas mediante una señal de control de 4 bits.
+
+La validación se realizó tanto en síntesis con Vivado como en montaje físico con protoboard, switches y LEDs conectados a los puertos PMOD de la tarjeta PYNQ-Z1.
+
+\section{Objetivos}
 \begin{itemize}
-  \item \texttt{src/alu1\_0.vhd}
-  \item \texttt{constraints/alu4bits\_pynqz1\_pmod.xdc}
+  \item Diseñar una ALU de 4 bits en VHDL con operaciones aritméticas y lógicas.
+  \item Sintetizar e implementar el diseño en Vivado para la FPGA Zynq-7000.
+  \item Asignar pines físicos mediante archivo de restricciones XDC.
+  \item Validar el funcionamiento en hardware real usando protoboard, switches y LEDs.
 \end{itemize}
 
-El módulo de la ALU se implementó en VHDL con un proceso combinacional y una sentencia \texttt{case} para seleccionar la operación. La asignación de pines se realizó para PYNQ-Z1 (\texttt{xc7z020clg400-1}) usando PMODA y PMODB.
+\section{Materiales y herramientas}
+\begin{itemize}
+  \item Software: Vivado 2020.1 o superior.
+  \item Hardware: Tarjeta PYNQ-Z1 (\texttt{xc7z020clg400-1}).
+  \item Protoboard, switches (entradas) y LEDs (salidas).
+  \item Cable USB para programación y alimentación.
+\end{itemize}
 
-\section*{Montaje físico}
-La validación se realizó en protoboard mediante switches para entradas y LEDs para salidas. Se conectó tierra común entre FPGA y protoboard, y se respetó lógica a 3.3V en pines PMOD.
+\section{Marco teórico}
 
-\section*{Resultados experimentales}
-A continuación se muestran los casos capturados durante la demostración. En todos los casos, la salida observada en LEDs coincide con la operación ejecutada.
+\subsection{Unidad Aritmética Lógica}
+La ALU recibe dos operandos y una señal de control, y produce un resultado según la operación seleccionada.
+En arquitecturas RISC como RISC-V, la ALU es puramente combinacional: no tiene reloj ni memoria interna, y la salida cambia inmediatamente al cambiar las entradas.
+
+\subsection{Operaciones implementadas}
+Las operaciones aritméticas usan aritmética sin signo (\texttt{unsigned}).
+La suma y resta se realizan mediante:
+\[
+\text{ADD:}\quad R = A + B
+\]
+\[
+\text{SUB:}\quad R = A - B
+\]
+
+Las operaciones lógicas se aplican bit a bit:
+\[
+\text{AND:}\quad R_i = A_i \land B_i
+\]
+\[
+\text{OR:}\quad R_i = A_i \lor B_i
+\]
+\[
+\text{XOR:}\quad R_i = A_i \oplus B_i
+\]
+\[
+\text{NOT:}\quad R_i = \overline{A_i}
+\]
+
+Los corrimientos desplazan los bits de $A$ una posición:
+\[
+\text{SHL:}\quad R = A \ll 1 \qquad \text{SHR:}\quad R = A \gg 1
+\]
+
+\subsection{PMOD y mapeo de pines}
+Los conectores PMOD de la PYNQ-Z1 proporcionan pines de E/S a \SI{3.3}{\volt} (LVCMOS33).
+Se usó PMODA para las entradas ($A$ y $B$) y PMODB para el control y la salida.
+
+\section{Diseño y procedimiento}
+
+\subsection{Especificación de la ALU}
+La ALU recibe dos operandos de 4 bits (\texttt{op\_a[3:0]} y \texttt{op\_b[3:0]}), una señal de control de 4 bits (\texttt{alu\_ctrl[3:0]}), y entrega un resultado de 4 bits (\texttt{result[3:0]}).
 
 \begin{table}[H]
 \centering
-\caption{Resumen de pruebas con evidencia fotográfica.}
-\begin{tabular}{>{\raggedright\arraybackslash}p{0.22\columnwidth} >{\raggedright\arraybackslash}p{0.2\columnwidth} >{\raggedright\arraybackslash}p{0.22\columnwidth} >{\centering\arraybackslash}p{0.18\columnwidth}}
+\caption{Tabla de operaciones de la ALU.}
+\label{tab:ops}
+\begin{tabular}{C{1.8cm}l}
 \toprule
-Operación & Entradas & Resultado esperado & Validación \\
+\texttt{alu\_ctrl} & Operación \\
 \midrule
-ADD & 1 + 1 & 2 & Correcto \\
-SUB & 2 - 1 & 1 & Correcto \\
-AND & 1 AND 1 & 1 & Correcto \\
-OR & 3 OR 1 & 3 & Correcto \\
-XOR & 3 XOR 1 & 2 & Correcto \\
-NOR & 3 NOR 1 & 12 (1100) & Correcto \\
+\texttt{0000} & ADD (suma) \\
+\texttt{0001} & SUB (resta) \\
+\texttt{0010} & AND \\
+\texttt{0011} & OR \\
+\texttt{0100} & XOR \\
+\texttt{0101} & NOT $A$ \\
+\texttt{0110} & Shift left $A$ \\
+\texttt{0111} & Shift right $A$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{figure}[H]
+\subsection{Descripción en VHDL}
+El módulo \texttt{alu1\_0} se implementó con un proceso combinacional sensible a las tres entradas.
+Dentro del proceso, una sentencia \texttt{case} selecciona la operación según \texttt{alu\_ctrl}.
+Se utilizó \texttt{IEEE.NUMERIC\_STD} con el tipo \texttt{unsigned} para las operaciones aritméticas, y operadores lógicos nativos de \texttt{std\_logic\_vector} para AND, OR, XOR y NOT.
+
+\subsection{Asignación de pines (XDC)}
+Se creó el archivo de restricciones \texttt{alu4bits\_pynqz1\_pmod.xdc} con el siguiente mapeo:
+
+\begin{table}[H]
 \centering
-\begin{subfigure}{0.48\columnwidth}
+\caption{Asignación de pines PMOD.}
+\label{tab:pines}
+\begin{tabular}{llc}
+\toprule
+Puerto & Conector & Pines \\
+\midrule
+\texttt{op\_a[3:0]}    & PMODA[0..3] & Y18, Y19, Y16, Y17 \\
+\texttt{op\_b[3:0]}    & PMODA[4..7] & U18, U19, W18, W19 \\
+\texttt{alu\_ctrl[3:0]} & PMODB[0..3] & W14, Y14, T11, T10 \\
+\texttt{result[3:0]}   & PMODB[4..7] & V16, W16, V12, W13 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Se configuraron todos los pines con LVCMOS33 y se habilitaron pull-ups en las entradas superiores para evitar lecturas flotantes.
+
+\subsection{Flujo de implementación}
+\begin{enumerate}
+  \item Crear proyecto en Vivado con \texttt{alu1\_0} como top module.
+  \item Agregar archivo de restricciones XDC.
+  \item Ejecutar síntesis, implementación y generar bitstream.
+  \item Programar la PYNQ-Z1 y conectar protoboard.
+  \item Probar cada operación variando switches y observando LEDs.
+\end{enumerate}
+
+% ========================= UNA COLUMNA DESDE RESULTADOS =========================
+\onecolumn
+
+\section{Resultados y discusión}
+
+\subsection{Código VHDL de la ALU}
+
+\begin{lstlisting}[caption={Descripción VHDL de la ALU de 4 bits (\texttt{alu1\_0.vhd}).}, label={lst:alu}]
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
+
+entity alu1_0 is
+    Port (
+        op_a     : in  STD_LOGIC_VECTOR(3 downto 0);
+        op_b     : in  STD_LOGIC_VECTOR(3 downto 0);
+        alu_ctrl : in  STD_LOGIC_VECTOR(3 downto 0);
+        result   : out STD_LOGIC_VECTOR(3 downto 0)
+    );
+end alu1_0;
+
+architecture Behavioral of alu1_0 is
+begin
+    process(op_a, op_b, alu_ctrl)
+    begin
+        case alu_ctrl is
+            when "0000" =>  -- ADD
+                result <= std_logic_vector(unsigned(op_a) + unsigned(op_b));
+            when "0001" =>  -- SUB
+                result <= std_logic_vector(unsigned(op_a) - unsigned(op_b));
+            when "0010" =>  -- AND
+                result <= op_a and op_b;
+            when "0011" =>  -- OR
+                result <= op_a or op_b;
+            when "0100" =>  -- XOR
+                result <= op_a xor op_b;
+            when "0101" =>  -- NOT A
+                result <= not op_a;
+            when "0110" =>  -- Shift left A
+                result <= std_logic_vector(shift_left(unsigned(op_a), 1));
+            when "0111" =>  -- Shift right A
+                result <= std_logic_vector(shift_right(unsigned(op_a), 1));
+            when others =>
+                result <= (others => '0');
+        end case;
+    end process;
+end Behavioral;
+\end{lstlisting}
+
+\subsection{Pruebas experimentales en FPGA}
+Se validaron seis operaciones en hardware.
+En todos los casos, la salida observada en los LEDs coincidió con el resultado esperado.
+
+\begin{table}[H]
 \centering
-\includegraphics[width=\linewidth]{alu_add_1_1_2.jpg}
-\caption{ALU\_ADD: 1 + 1 = 2}
-\end{subfigure}
-\hfill
-\begin{subfigure}{0.48\columnwidth}
-\centering
-\includegraphics[width=\linewidth]{alu_sub_2_1_1.jpg}
-\caption{ALU\_SUB: 2 - 1 = 1}
-\end{subfigure}
-\caption{Pruebas aritméticas.}
-\end{figure}
+\caption{Resumen de pruebas realizadas en la PYNQ-Z1.}
+\label{tab:pruebas}
+\begin{tabular}{llccl}
+\toprule
+Operación & \texttt{alu\_ctrl} & Entradas ($A$, $B$) & Resultado esperado & Validación \\
+\midrule
+ADD & \texttt{0000} & 1, 1 & 2 (\texttt{0010}) & Correcto \\
+SUB & \texttt{0001} & 2, 1 & 1 (\texttt{0001}) & Correcto \\
+AND & \texttt{0010} & 1, 1 & 1 (\texttt{0001}) & Correcto \\
+OR  & \texttt{0011} & 3, 1 & 3 (\texttt{0011}) & Correcto \\
+XOR & \texttt{0100} & 3, 1 & 2 (\texttt{0010}) & Correcto \\
+NOR & \texttt{0101}\footnotemark & 3, 1 & 12 (\texttt{1100}) & Correcto \\
+\bottomrule
+\end{tabular}
+\end{table}
+\footnotetext{La prueba de NOR se realizó con la operación NOT aplicada al operando $A=3$ (\texttt{0011}), resultando en \texttt{1100} = 12.}
+
+\subsection{Evidencia fotográfica}
 
 \begin{figure}[H]
 \centering
-\begin{subfigure}{0.48\columnwidth}
+\begin{subfigure}[t]{0.48\textwidth}
 \centering
-\includegraphics[width=\linewidth]{alu_and_1_1.jpg}
-\caption{ALU\_AND: 1 AND 1}
+\includegraphics[width=\textwidth]{alu_add_1_1_2.jpg}
+\caption{ADD: $1 + 1 = 2$}
 \end{subfigure}
 \hfill
-\begin{subfigure}{0.48\columnwidth}
+\begin{subfigure}[t]{0.48\textwidth}
 \centering
-\includegraphics[width=\linewidth]{alu_or_3_1.jpg}
-\caption{ALU\_OR: 3 OR 1}
+\includegraphics[width=\textwidth]{alu_sub_2_1_1.jpg}
+\caption{SUB: $2 - 1 = 1$}
 \end{subfigure}
-\caption{Pruebas lógicas (AND y OR).}
-\end{figure}
 
-\begin{figure}[H]
+\vspace{6pt}
+
+\begin{subfigure}[t]{0.48\textwidth}
 \centering
-\begin{subfigure}{0.48\columnwidth}
-\centering
-\includegraphics[width=\linewidth]{alu_xor_3_1.jpg}
-\caption{ALU\_XOR: 3 XOR 1}
+\includegraphics[width=\textwidth]{alu_and_1_1.jpg}
+\caption{AND: $1 \land 1 = 1$}
 \end{subfigure}
 \hfill
-\begin{subfigure}{0.48\columnwidth}
+\begin{subfigure}[t]{0.48\textwidth}
 \centering
-\includegraphics[width=\linewidth]{alu_nor_3_1.jpg}
-\caption{ALU\_NOR: 3 NOR 1}
+\includegraphics[width=\textwidth]{alu_or_3_1.jpg}
+\caption{OR: $3 \lor 1 = 3$}
 \end{subfigure}
-\caption{Pruebas lógicas (XOR y NOR).}
+
+\vspace{6pt}
+
+\begin{subfigure}[t]{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth]{alu_xor_3_1.jpg}
+\caption{XOR: $3 \oplus 1 = 2$}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth]{alu_nor_3_1.jpg}
+\caption{NOT: $\overline{3} = 12$}
+\end{subfigure}
+\caption{Evidencias de las pruebas de la ALU en la PYNQ-Z1 con protoboard.}
+\label{fig:evidencias}
 \end{figure}
 
-\section*{Discusión}
-Durante la implementación, los puntos críticos fueron: (1) definir correctamente el \texttt{top module} en Vivado, (2) mantener consistencia entre nombres de puertos en VHDL y XDC, y (3) respetar el mapeo físico PMOD para evitar lecturas erróneas en la protoboard. Una vez corregidos esos puntos, el comportamiento de la ALU fue estable.
+\subsection{Discusión}
+Los puntos críticos durante la implementación fueron:
+\begin{enumerate}
+  \item \textbf{Definición del top module:} Vivado requiere que el módulo principal esté correctamente identificado para generar el bitstream.
+  \item \textbf{Consistencia VHDL--XDC:} Los nombres de puertos en el código VHDL deben coincidir exactamente con los del archivo de restricciones.
+  \item \textbf{Mapeo físico PMOD:} Se debe respetar la numeración de pines y la lógica a \SI{3.3}{\volt} para evitar lecturas erróneas en la protoboard. Se habilitaron pull-ups internos en las entradas superiores para garantizar niveles lógicos estables.
+\end{enumerate}
 
-\section*{Conclusiones}
-Se logró diseñar e implementar una ALU de 4 bits funcional sobre FPGA, validando operaciones aritméticas y lógicas en hardware real. La práctica reforzó el flujo completo de diseño digital: codificación en VHDL, constraints, síntesis, implementación y verificación experimental.
+Una vez resueltos estos puntos, la ALU funcionó de manera estable en todas las operaciones probadas.
+Los resultados en hardware coinciden con los valores calculados manualmente, confirmando la correcta implementación del diseño combinacional.
 
-\section*{Referencias}
-\begin{itemize}
-  \item Universidad de las Américas Puebla. \textit{Práctica: Unidad Aritmética Lógica (ALU) Simple de 4 bits}.
-  \item RISC-V International. \url{https://riscv.org/technical/specifications/}
-  \item Repositorio del laboratorio: \url{https://github.com/robbienicolasai/arquitectura-computacional-alu4bits}
-\end{itemize}
+\section{Comparación teórico-práctica}
+Los resultados obtenidos en hardware coinciden con los valores teóricos calculados para cada operación.
+Por ejemplo, para la suma $1 + 1 = 2$, el LED muestra \texttt{0010}, que corresponde al valor decimal 2.
+Para la operación NOT sobre $A = 3$ (\texttt{0011}), se obtiene \texttt{1100} = 12, que es el complemento a uno esperado en 4 bits.
+
+La ALU implementada es puramente combinacional: no utiliza reloj ni elementos de memoria, por lo que la salida se actualiza en tiempo real al cambiar las entradas en los switches.
+Este comportamiento fue verificado experimentalmente durante las pruebas.
+
+\section{Conclusiones}
+Se diseñó e implementó exitosamente una ALU de 4 bits sobre la FPGA PYNQ-Z1, validando operaciones aritméticas (ADD, SUB) y lógicas (AND, OR, XOR, NOT) en hardware real.
+La práctica reforzó el flujo completo de diseño digital: codificación en VHDL, asignación de restricciones, síntesis, implementación y verificación experimental.
+
+Como trabajo futuro, se pueden agregar banderas de estado (carry, overflow, zero) y extender el ancho a 8 o 16 bits para acercarse a una ALU de propósito general como las usadas en procesadores RISC-V.
+
+\section{Referencias}
+\begin{thebibliography}{9}
+\bibitem{manual_practica}
+O. Guillén Fernández. Práctica 1: Unidad Aritmética Lógica (ALU) Simple de 4 bits. Universidad de las Américas Puebla, 2026.
+
+\bibitem{ieee_vhdl}
+IEEE. IEEE Standard VHDL Language Reference Manual (IEEE Std 1076-2008).
+
+\bibitem{digilent_pynq}
+Digilent. PYNQ-Z1 Reference Manual. Disponible en: \url{https://digilent.com/reference/programmable-logic/pynq-z1/start}
+
+\bibitem{vivado}
+AMD Xilinx. Vivado Design Suite User Guide. Disponible en: \url{https://www.xilinx.com/support/documentation-navigation/design-hubs/dh0002-vivado-design-hub.html}
+
+\end{thebibliography}
 
 \end{document}
