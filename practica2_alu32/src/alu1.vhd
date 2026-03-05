@@ -42,6 +42,7 @@ constant ALU_NOR   : std_logic_vector(3 downto 0):= "1111";
 signal sum_extended : std_logic_vector(data_width downto 0);
 signal sub_extended : std_logic_vector(data_width downto 0);
 signal opa_extended, opb_extended : unsigned(data_width downto 0);
+signal result_int : std_logic_vector(data_width-1 downto 0);
 
 begin
 
@@ -51,7 +52,9 @@ opb_extended <= unsigned('0' & opb);
 
 -- PROCESO PRINCIPAL CON CASES
 process(opa, opb, alu_ctrl, sum_extended, sub_extended)
-    variable shamt : integer range 0 to 31;
+    variable shamt    : integer range 0 to 31;
+    variable sub_tmp  : unsigned(data_width downto 0);
+    variable aui_tmp  : unsigned(data_width downto 0);
 begin
     shamt := to_integer(unsigned(opb(4 downto 0)));
 
@@ -61,23 +64,24 @@ begin
         when ALU_ADD =>
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
-            result <= std_logic_vector(signed(opa) + signed(opb));
+            result_int <= std_logic_vector(signed(opa) + signed(opb));
             carry_out <= '0';
             overflow <= '0';
 
         -- RESTA (usando extendido también)
         when ALU_SUB =>
             sum_extended <= (others => '0');
-            sub_extended <= std_logic_vector(opa_extended - opb_extended);
-            result <= sub_extended(data_width-1 downto 0);
-            carry_out <= sub_extended(data_width);
+            sub_tmp := opa_extended - opb_extended;
+            sub_extended <= std_logic_vector(sub_tmp);
+            result_int <= std_logic_vector(sub_tmp(data_width-1 downto 0));
+            carry_out <= sub_tmp(data_width);
             overflow <= '0';
 
         -- AND
         when ALU_AND =>
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
-            result <= opa and opb;
+            result_int <= opa and opb;
             carry_out <= '0';
             overflow <= '0';
 
@@ -85,7 +89,7 @@ begin
         when ALU_OR =>
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
-            result <= opa or opb;
+            result_int <= opa or opb;
             carry_out <= '0';
             overflow <= '0';
 
@@ -93,7 +97,7 @@ begin
         when ALU_XOR =>
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
-            result <= opa xor opb;
+            result_int <= opa xor opb;
             carry_out <= '0';
             overflow <= '0';
 
@@ -101,7 +105,7 @@ begin
         when ALU_SLL =>
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
-            result <= std_logic_vector(shift_left(unsigned(opa), shamt));
+            result_int <= std_logic_vector(shift_left(unsigned(opa), shamt));
             carry_out <= '0';
             overflow <= '0';
 
@@ -109,7 +113,7 @@ begin
         when ALU_SRL =>
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
-            result <= std_logic_vector(shift_right(unsigned(opa), shamt));
+            result_int <= std_logic_vector(shift_right(unsigned(opa), shamt));
             carry_out <= '0';
             overflow <= '0';
 
@@ -117,7 +121,7 @@ begin
         when ALU_SRA =>
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
-            result <= std_logic_vector(shift_right(signed(opa), shamt));
+            result_int <= std_logic_vector(shift_right(signed(opa), shamt));
             carry_out <= '0';
             overflow <= '0';
 
@@ -126,9 +130,9 @@ begin
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
             if signed(opa) < signed(opb) then
-                result <= (0 => '1', others => '0');
+                result_int <= (0 => '1', others => '0');
             else
-                result <= (others => '0');
+                result_int <= (others => '0');
             end if;
             carry_out <= '0';
             overflow <= '0';
@@ -138,9 +142,9 @@ begin
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
             if unsigned(opa) < unsigned(opb) then
-                result <= (0 => '1', others => '0');
+                result_int <= (0 => '1', others => '0');
             else
-                result <= (others => '0');
+                result_int <= (others => '0');
             end if;
             carry_out <= '0';
             overflow <= '0';
@@ -149,7 +153,7 @@ begin
         when ALU_SLLI =>
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
-            result <= std_logic_vector(shift_left(unsigned(opa), shamt));
+            result_int <= std_logic_vector(shift_left(unsigned(opa), shamt));
             carry_out <= '0';
             overflow <= '0';
 
@@ -157,7 +161,7 @@ begin
         when ALU_SRLI =>
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
-            result <= std_logic_vector(shift_right(unsigned(opa), shamt));
+            result_int <= std_logic_vector(shift_right(unsigned(opa), shamt));
             carry_out <= '0';
             overflow <= '0';
 
@@ -165,7 +169,7 @@ begin
         when ALU_SRAI =>
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
-            result <= std_logic_vector(shift_right(signed(opa), shamt));
+            result_int <= std_logic_vector(shift_right(signed(opa), shamt));
             carry_out <= '0';
             overflow <= '0';
 
@@ -173,43 +177,46 @@ begin
         when ALU_LUI =>
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
-            result <= std_logic_vector(shift_left(unsigned(opb), 12));
+            result_int <= std_logic_vector(shift_left(unsigned(opb), 12));
             carry_out <= '0';
             overflow <= '0';
 
         -- AUIPC simplificado: A(PC) + (B << 12)
         when ALU_AUIPC =>
-            sum_extended <= std_logic_vector(opa_extended + ('0' & shift_left(unsigned(opb), 12)));
+            aui_tmp := opa_extended + ('0' & shift_left(unsigned(opb), 12));
+            sum_extended <= std_logic_vector(aui_tmp);
             sub_extended <= (others => '0');
-            result <= sum_extended(data_width-1 downto 0);
-            carry_out <= sum_extended(data_width);
+            result_int <= std_logic_vector(aui_tmp(data_width-1 downto 0));
+            carry_out <= aui_tmp(data_width);
             overflow <= '0';
 
         -- NOR
         when ALU_NOR =>
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
-            result <= opa nor opb;
+            result_int <= opa nor opb;
             carry_out <= '0';
             overflow <= '0';
 
         when others =>
             sum_extended <= (others => '0');
             sub_extended <= (others => '0');
-            result <= (others => '0');
+            result_int <= (others => '0');
             carry_out <= '0';
             overflow <= '0';
     end case;
 
     -- banderas derivadas del resultado
-    if result = (result'range => '0') then
+    if result_int = (result_int'range => '0') then
         zero <= '1';
     else
         zero <= '0';
     end if;
 
-    sign <= result(data_width-1);
+    sign <= result_int(data_width-1);
 
 end process;
+
+result <= result_int;
 
 end simple;
