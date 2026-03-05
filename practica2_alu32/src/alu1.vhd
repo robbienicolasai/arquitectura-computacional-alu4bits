@@ -16,7 +16,6 @@ port (
     overflow  : out std_logic;
     zero      : out std_logic;
     sign      : out std_logic
-    -- zero : out std_logic
 );
 end alu1;
 
@@ -40,131 +39,133 @@ constant ALU_LUI   : std_logic_vector(3 downto 0) := "1101";
 constant ALU_AUIPC : std_logic_vector(3 downto 0) := "1110";
 constant ALU_NOR   : std_logic_vector(3 downto 0) := "1111";
 
--- SEÑALES INTERNAS
-signal sum_extended : std_logic_vector(data_width downto 0);
-signal sub_extended : std_logic_vector(data_width downto 0);
-signal opa_extended, opb_extended : unsigned(data_width downto 0);
-signal r_int : std_logic_vector(data_width-1 downto 0);
-
 begin
 
--- EXTENDER OPERANDOS (para carry)
-opa_extended <= unsigned('0' & opa);
-opb_extended <= unsigned('0' & opb);
-
 -- PROCESO PRINCIPAL CON CASES
-process(opa, opb, alu_ctrl, opa_extended, opb_extended)
-    variable shamt    : integer range 0 to 31;
-    variable b_shl_12 : unsigned(data_width-1 downto 0);
-    variable sumv     : unsigned(data_width downto 0);
-    variable subv     : unsigned(data_width downto 0);
+process(opa, opb, alu_ctrl)
+    variable shamt      : integer range 0 to 31;
+    variable res_v      : std_logic_vector(data_width-1 downto 0);
+    variable sum_ext_v  : unsigned(data_width downto 0);
+    variable sub_ext_v  : unsigned(data_width downto 0);
+    variable b_shl_12_v : unsigned(data_width-1 downto 0);
+    variable c_v        : std_logic;
+    variable o_v        : std_logic;
 begin
     shamt := to_integer(unsigned(opb(4 downto 0)));
 
     -- defaults
-    r_int      <= (others => '0');
-    sum_extended <= (others => '0');
-    sub_extended <= (others => '0');
-    carry_out  <= '0';
-    overflow   <= '0';
+    res_v := (others => '0');
+    c_v   := '0';
+    o_v   := '0';
 
     case alu_ctrl is
 
         -- ADD
         when ALU_ADD =>
-            sumv := opa_extended + opb_extended;
-            sum_extended <= std_logic_vector(sumv);
-            r_int <= std_logic_vector(sumv(data_width-1 downto 0));
-            carry_out <= sumv(data_width);
-            overflow <= (not (opa(data_width-1) xor opb(data_width-1))) and (opa(data_width-1) xor std_logic(sumv(data_width-1)));
+            sum_ext_v := unsigned('0' & opa) + unsigned('0' & opb);
+            res_v := std_logic_vector(sum_ext_v(data_width-1 downto 0));
+            c_v := sum_ext_v(data_width);
+            -- overflow suma con signo
+            o_v := (not (opa(data_width-1) xor opb(data_width-1))) and
+                   (opa(data_width-1) xor res_v(data_width-1));
 
         -- SUB
         when ALU_SUB =>
-            subv := opa_extended - opb_extended;
-            sub_extended <= std_logic_vector(subv);
-            r_int <= std_logic_vector(subv(data_width-1 downto 0));
-            carry_out <= subv(data_width);
-            overflow <= (opa(data_width-1) xor opb(data_width-1)) and (opa(data_width-1) xor std_logic(subv(data_width-1)));
+            sub_ext_v := unsigned('0' & opa) - unsigned('0' & opb);
+            res_v := std_logic_vector(sub_ext_v(data_width-1 downto 0));
+            c_v := sub_ext_v(data_width);
+            -- overflow resta con signo
+            o_v := (opa(data_width-1) xor opb(data_width-1)) and
+                   (opa(data_width-1) xor res_v(data_width-1));
 
         -- AND
         when ALU_AND =>
-            r_int <= opa and opb;
+            res_v := opa and opb;
 
         -- OR
         when ALU_OR =>
-            r_int <= opa or opb;
+            res_v := opa or opb;
 
         -- XOR
         when ALU_XOR =>
-            r_int <= opa xor opb;
+            res_v := opa xor opb;
 
         -- SLL
         when ALU_SLL =>
-            r_int <= std_logic_vector(shift_left(unsigned(opa), shamt));
+            res_v := std_logic_vector(shift_left(unsigned(opa), shamt));
 
         -- SRL
         when ALU_SRL =>
-            r_int <= std_logic_vector(shift_right(unsigned(opa), shamt));
+            res_v := std_logic_vector(shift_right(unsigned(opa), shamt));
 
         -- SRA
         when ALU_SRA =>
-            r_int <= std_logic_vector(shift_right(signed(opa), shamt));
+            res_v := std_logic_vector(shift_right(signed(opa), shamt));
 
         -- SLT (signed)
         when ALU_SLT =>
             if signed(opa) < signed(opb) then
-                r_int <= (0 => '1', others => '0');
+                res_v := (0 => '1', others => '0');
             else
-                r_int <= (others => '0');
+                res_v := (others => '0');
             end if;
 
         -- SLTU (unsigned)
         when ALU_SLTU =>
             if unsigned(opa) < unsigned(opb) then
-                r_int <= (0 => '1', others => '0');
+                res_v := (0 => '1', others => '0');
             else
-                r_int <= (others => '0');
+                res_v := (others => '0');
             end if;
 
-        -- SLLI (usa opb[4:0] como inmediato)
+        -- SLLI
         when ALU_SLLI =>
-            r_int <= std_logic_vector(shift_left(unsigned(opa), shamt));
+            res_v := std_logic_vector(shift_left(unsigned(opa), shamt));
 
         -- SRLI
         when ALU_SRLI =>
-            r_int <= std_logic_vector(shift_right(unsigned(opa), shamt));
+            res_v := std_logic_vector(shift_right(unsigned(opa), shamt));
 
         -- SRAI
         when ALU_SRAI =>
-            r_int <= std_logic_vector(shift_right(signed(opa), shamt));
+            res_v := std_logic_vector(shift_right(signed(opa), shamt));
 
-        -- LUI = B << 12
+        -- LUI: B << 12
         when ALU_LUI =>
-            r_int <= std_logic_vector(shift_left(unsigned(opb), 12));
+            res_v := std_logic_vector(shift_left(unsigned(opb), 12));
 
-        -- AUIPC simplificado = A(PC) + (B << 12)
+        -- AUIPC simplificado: A(PC) + (B << 12)
         when ALU_AUIPC =>
-            b_shl_12 := shift_left(unsigned(opb), 12);
-            sumv := opa_extended + ('0' & b_shl_12);
-            sum_extended <= std_logic_vector(sumv);
-            r_int <= std_logic_vector(sumv(data_width-1 downto 0));
-            carry_out <= sumv(data_width);
-            overflow <= (not (opa(data_width-1) xor std_logic(b_shl_12(data_width-1)))) and
-                        (opa(data_width-1) xor std_logic(sumv(data_width-1)));
+            b_shl_12_v := shift_left(unsigned(opb), 12);
+            sum_ext_v := unsigned('0' & opa) + unsigned('0' & std_logic_vector(b_shl_12_v));
+            res_v := std_logic_vector(sum_ext_v(data_width-1 downto 0));
+            c_v := sum_ext_v(data_width);
+            o_v := (not (opa(data_width-1) xor std_logic_vector(b_shl_12_v)(data_width-1))) and
+                   (opa(data_width-1) xor res_v(data_width-1));
 
         -- NOR
         when ALU_NOR =>
-            r_int <= opa nor opb;
+            res_v := opa nor opb;
 
         when others =>
-            r_int <= (others => '0');
+            res_v := (others => '0');
+            c_v   := '0';
+            o_v   := '0';
     end case;
 
-end process;
+    -- salidas
+    result    <= res_v;
+    carry_out <= c_v;
+    overflow  <= o_v;
 
--- SALIDAS
-result <= r_int;
-zero   <= '1' when r_int = (r_int'range => '0') else '0';
-sign   <= r_int(data_width-1);
+    if res_v = (res_v'range => '0') then
+        zero <= '1';
+    else
+        zero <= '0';
+    end if;
+
+    sign <= res_v(data_width-1);
+
+end process;
 
 end simple;
