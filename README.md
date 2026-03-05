@@ -10,9 +10,10 @@ Repositorio para organizar prácticas de ALU en Vivado (PYNQ-Z1 / `xc7z020clg400
 - `reportes/practica1_alu4bits/`
 
 ### Práctica 2 — ALU 32 bits
-- `src/practica2_alu32/alu1.vhd`
-- `sim/practica2_alu32/tb_alu_jueves.vhd`
-- `docs/practica2_alu32/`
+- `practica2_alu32/src/alu1.vhd`
+- `practica2_alu32/sim/tb_alu_jueves.vhd`
+- `practica2_alu32/docs/`
+- `practica2_alu32/results/`
 
 ## Soporte y contexto
 - `contexto/notas-fpga.md`
