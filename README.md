@@ -1,21 +1,27 @@
-# Proyecto: Arquitectura Computacional (ALU 4 bits en FPGA)
+# Proyecto: Arquitectura Computacional (FPGA en PYNQ-Z1)
 
-Repositorio para organizar el trabajo de FPGA (PYNQ-Z1 / Vivado), incluyendo constraints XDC, notas de conexión de protoboard y checklist de síntesis/programación.
+Repositorio para organizar prácticas de ALU en Vivado (PYNQ-Z1 / `xc7z020clg400-1`).
 
-## Contexto
-- Tarjeta identificada: Digilent PYNQ-Z1 (Zynq-7000).
-- Uso de PMODA/PMODB para entradas/salidas de ALU 4 bits.
-- Se trabajó en corrección de XDC y flujo en Vivado.
+## Prácticas en este repo
 
-## Objetivo
-Tener un histórico claro y reutilizable para:
-- VHDL de la ALU
-- XDC correcto por pines
-- Procedimiento de síntesis, bitstream y carga
-- Lecciones y errores frecuentes
+### Práctica 1 — ALU 4 bits
+- `src/alu1_0.vhd`
+- `constraints/alu4bits_pynqz1_pmod.xdc`
+- `reportes/practica1_alu4bits/`
 
-## Estructura
+### Práctica 2 — ALU 32 bits
+- `src/practica2_alu32/alu1.vhd`
+- `sim/practica2_alu32/tb_alu_jueves.vhd`
+- `docs/practica2_alu32/`
+
+## Soporte y contexto
 - `contexto/notas-fpga.md`
 - `contexto/xdc-referencia.md`
 - `contexto/checklist-vivado.md`
-- `assets/` (capturas si se agregan)
+- `PLAN_INTERACTIVO.md`
+
+## Flujo de trabajo recomendado
+1. Crear proyecto Vivado con `xc7z020clg400-1`.
+2. Agregar archivos de la práctica correspondiente.
+3. Definir top entity.
+4. Ejecutar Synthesis → Implementation → Generate Bitstream.
